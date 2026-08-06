@@ -1,0 +1,112 @@
+{
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"Name": "Claude Deck",
+	"Version": "1.0.0.0",
+	"Author": "Bri Alvarez",
+	"Description": "Monitor Claude Code sessions, token usage, and estimated cost right on your Stream Deck.",
+	"UUID": "com.brialvarez.claude-deck",
+	"Icon": "imgs/plugin/icon",
+	"Category": "Claude Deck",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "6.5"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "disabled"
+	},
+	"Actions": [
+		{
+			"Name": "Session",
+			"UUID": "com.brialvarez.claude-deck.session",
+			"Icon": "imgs/actions/session",
+			"Tooltip": "One Claude Code session per key: shows project, state, and activity. Press to jump to its terminal (or resume it in a new one). Place multiple keys for multiple sessions.",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Approve",
+			"UUID": "com.brialvarez.claude-deck.approve",
+			"Icon": "imgs/actions/approve",
+			"Tooltip": "Approve the pending permission request (focuses the session's terminal and presses Return).",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Deny",
+			"UUID": "com.brialvarez.claude-deck.deny",
+			"Icon": "imgs/actions/deny",
+			"Tooltip": "Deny the pending permission request (focuses the session's terminal and presses Escape).",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Limits",
+			"UUID": "com.brialvarez.claude-deck.limits",
+			"Icon": "imgs/actions/limits",
+			"Tooltip": "Your real Claude plan limits: current 5-hour session %, weekly %, and per-model weekly % — same numbers as /usage. Press to refresh.",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Active Sessions",
+			"UUID": "com.brialvarez.claude-deck.sessions",
+			"Icon": "imgs/actions/sessions",
+			"Tooltip": "Shows how many Claude Code sessions are active right now, and how many were used today.",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Usage",
+			"UUID": "com.brialvarez.claude-deck.usage",
+			"Icon": "imgs/actions/usage",
+			"Tooltip": "Claude Code token usage and estimated cost. Press to cycle: Today / Last 5h / Last 7 days.",
+			"Controllers": ["Keypad"],
+			"UserTitleEnabled": false,
+			"States": [
+				{
+					"Image": "imgs/actions/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		}
+	]
+}

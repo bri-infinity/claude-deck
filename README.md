@@ -1,0 +1,112 @@
+# Claude Deck
+
+A Stream Deck plugin for **[Claude Code](https://claude.com/claude-code)**: see your sessions at a glance, jump to their terminals, approve or deny permission prompts from a key, and track usage, cost, and plan limits.
+
+**Zero dependencies** — no `node_modules`, no build step. The plugin speaks the Stream Deck WebSocket protocol directly over `node:net`, and the Stream Deck app supplies the Node.js runtime.
+
+## Actions
+
+| Key | Shows | Press |
+|---|---|---|
+| **Session** | One session per key: project name, state color (🟢 running / 🟠 needs approval / 🔵 waiting for input / ⚫ idle), time since activity. Place several — they fill left-to-right, approval-waiters first, then most recent. | Jump to the session's terminal (cmux workspace or Terminal.app/iTerm2 tab). If it isn't running, resume it (`claude --resume`) in a new terminal. **Long-press (0.6s) to dismiss** a session from the deck — it returns automatically on new activity. |
+| **Approve** | Which session it will approve (the one waiting for permission) | Sends Enter to that session — via direct cmux surface key injection (no focus stealing) or by focusing the Terminal/iTerm tab first |
+| **Deny** | Same target | Same, with Escape |
+| **Active Sessions** | Mini session list (state dot + name, page indicator, overflow count) with active/today counts. Bold rows = currently on your Session keys. | Pages the Session keys through the full list |
+| **Usage** | Estimated spend + tokens from local transcripts | Cycles Today → Last 5h → Last 7 days |
+| **Limits** | Your **real plan limits** (same numbers as `/usage`): 5-hour session %, weekly %, per-model weekly % as color-coded bars | Refresh now |
+
+Idle sessions age off the deck after 24 hours (waiting ones always show). Keys refresh every 5 seconds and instantly on Claude Code notification events.
+
+## Requirements
+
+- macOS, Stream Deck app 6.5+
+- [Claude Code](https://claude.com/claude-code) (the plugin reads its local transcripts in `~/.claude/projects`)
+- Optional: [cmux](https://cmux.com) for the best experience (workspace jump + focus-free approve/deny), or Terminal.app / iTerm2
+- Node.js is **not** required (dev scripts use a local Node only for icon generation and tests)
+
+## Install
+
+```sh
+git clone <this-repo> && cd claude-deck
+./install.sh   # symlinks the plugin into Stream Deck and restarts the app
+```
+
+Then drag actions from the **Claude Deck** category onto keys.
+
+### Setup: "needs approval" detection (recommended)
+
+The plugin learns that a session is waiting for permission via a Claude Code [Notification hook](https://code.claude.com/docs/en/hooks). Add to `~/.claude/settings.json` (merge with any existing hooks):
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p ~/.claude/claude-deck; printf '{\"t\":%s,\"event\":%s}\\n' \"$(date +%s)\" \"$(cat)\" >> ~/.claude/claude-deck/events.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Without the hook, session keys still work — you just won't get the amber "NEEDS OK" state or approve/deny targeting.
+
+### Setup: cmux socket access (cmux users only)
+
+cmux only accepts control commands from its own processes by default. Let the plugin in:
+
+1. In `~/.config/cmux/cmux.json` set:
+   ```json
+   { "automation": { "socketControlMode": "password" } }
+   ```
+2. Write a password to `~/.local/state/cmux/socket-control-password`:
+   ```sh
+   umask 077 && openssl rand -hex 24 > ~/.local/state/cmux/socket-control-password
+   ```
+3. Restart cmux (the mode is read at startup).
+
+The plugin reads the password from that file automatically. cmux injects it into its own terminals, so cmux's hooks and CLI keep working unchanged.
+
+### Setup: macOS permissions
+
+- **Automation** — macOS prompts when the plugin first controls Terminal/iTerm2 (not needed for cmux).
+- **Accessibility** — only needed for approve/deny on plain Terminal/iTerm2 (keystroke synthesis). cmux users don't need it: keys are injected via cmux's socket API.
+
+### Setup: plan limits key
+
+The Limits key reads your existing Claude Code OAuth token (macOS Keychain, read-only — the refresh token is never touched) and calls the same endpoint the `/usage` command uses. No extra setup — but if you run a per-app firewall, allow the Stream Deck plugin process to reach `api.anthropic.com:443`.
+
+## How it works
+
+- **Sessions and usage**: incremental parsing of Claude Code's transcripts (`~/.claude/projects/*/*.jsonl`) — token counts summed per message with request-level dedup, costs estimated from published per-MTok API pricing (cache writes at 1.25× input, cache reads at 0.1×). Costs are estimates: subscription plans don't bill per token.
+- **Session → terminal mapping**: finds the `claude` process whose cwd matches the session (`ps` + one batched `lsof`), then locates its TTY in cmux's surface tree (with a cwd-based fallback for restored surfaces where cmux lost the TTY), or the Terminal.app/iTerm2 tab via AppleScript. All cmux handles use stable UUIDs.
+- **Safety rules**: a running session is never resumed into a duplicate; keystrokes are only ever delivered to an exactly-matched surface/tab.
+- **Waiting-state lifecycle**: a notification event marks a session waiting; any new transcript activity clears it.
+
+## Development
+
+Everything lives in `com.brialvarez.claude-deck.sdPlugin/bin/plugin.js`. After editing, restart the Stream Deck app.
+
+```sh
+# test the data pipeline + process/cmux mapping without a Stream Deck
+node com.brialvarez.claude-deck.sdPlugin/bin/plugin.js --test
+
+# regenerate icons (pure-Node SDF renderer — no image libraries)
+node gen-icons.mjs
+```
+
+Runtime log: `com.brialvarez.claude-deck.sdPlugin/logs/claude-deck.log`
+
+## Privacy
+
+Everything is local. The only network call is the optional Limits key hitting Anthropic's usage endpoint with your existing local OAuth token. Nothing else leaves your machine.
+
+## License
+
+MIT

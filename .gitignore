@@ -1,0 +1,5 @@
+.tools/
+*.bak
+.DS_Store
+com.brialvarez.claude-deck.sdPlugin/logs/
+node_modules/

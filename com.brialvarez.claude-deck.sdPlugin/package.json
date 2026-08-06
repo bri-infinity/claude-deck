@@ -1,0 +1,7 @@
+{
+	"name": "claude-deck",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Stream Deck plugin: Claude Code sessions and usage (zero dependencies)"
+}
