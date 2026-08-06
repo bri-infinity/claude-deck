@@ -3,5 +3,9 @@
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
-	"description": "Stream Deck plugin: Claude Code sessions and usage (zero dependencies)"
+	"description": "Stream Deck plugin: Claude Code sessions, approvals, and usage (zero dependencies)",
+	"scripts": {
+		"test": "node bin/plugin.js --test",
+		"icons": "node ../gen-icons.mjs"
+	}
 }
