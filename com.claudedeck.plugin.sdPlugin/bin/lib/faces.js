@@ -128,35 +128,41 @@ export function denyFace(target) {
 }
 
 /**
- * Mini session list for the "Active Sessions" key: up to 4 rows (state dot +
- * name), highlighting the rows currently shown on the Session slot keys.
+ * "Active Sessions" key: prominent active-session count on top, a compact
+ * session list below (state dot + name, rows currently on the Session slot
+ * keys in bold), page indicator in the header. Press pages the Session keys.
  * view: { offset, slotCount, page, pages, active, today }
  */
 export function sessionsListFace(sessions, view) {
 	const { offset, slotCount, page, pages, active, today } = view;
-	const header = pages > 1 ? `SESSIONS ${page + 1}/${pages}` : "SESSIONS";
 	let inner =
 		`<rect x="0" y="0" width="144" height="4" rx="2" fill="${ACCENT}" opacity="0.85"/>` +
-		`<text x="14" y="26" font-family="${FONTS}" font-size="13" font-weight="600" letter-spacing="1.5" fill="${DIM}">${esc(header)}</text>`;
-	// scroll the 4-row window so the current page's sessions are visible
-	const start = Math.min(offset, Math.max(0, sessions.length - 4));
-	const shown = sessions.slice(start, start + 4);
+		`<text x="14" y="24" font-family="${FONTS}" font-size="13" font-weight="600" letter-spacing="1.5" fill="${DIM}">SESSIONS</text>`;
+	if (pages > 1) {
+		inner += `<text x="130" y="24" text-anchor="end" font-family="${FONTS}" font-size="12" fill="${GRAY}">${page + 1}/${pages}</text>`;
+	}
+	// the number they glance for: sessions active right now
+	inner += `<text x="72" y="58" text-anchor="middle" font-family="${FONTS}" font-size="34" font-weight="700" fill="${active > 0 ? GREEN : FG}">${active}</text>`;
+
+	// 3-row list window, scrolled so the current page's sessions are visible
+	const ROWS = 3;
+	const start = Math.min(offset, Math.max(0, sessions.length - ROWS));
+	const shown = sessions.slice(start, start + ROWS);
 	shown.forEach((s, i) => {
-		const y = 46 + i * 20;
+		const y = 80 + i * 18;
 		const st = SESSION_STATES[s.state];
 		const abs = start + i;
 		const onDeck = abs >= offset && abs < offset + Math.max(1, slotCount);
 		inner +=
-			`<circle cx="20" cy="${y - 4.5}" r="4.5" fill="${st.color}"/>` +
-			`<text x="32" y="${y}" font-family="${FONTS}" font-size="14" font-weight="${onDeck ? 700 : 400}" fill="${onDeck ? FG : DIM}">${esc(truncate(s.name, 13))}</text>`;
+			`<circle cx="20" cy="${y - 4}" r="4" fill="${st.color}"/>` +
+			`<text x="31" y="${y}" font-family="${FONTS}" font-size="13" font-weight="${onDeck ? 700 : 400}" fill="${onDeck ? FG : DIM}">${esc(truncate(s.name, 14))}</text>`;
 	});
 	if (!shown.length) {
-		inner += `<text x="72" y="80" text-anchor="middle" font-family="${FONTS}" font-size="14" fill="${GRAY}">none</text>`;
+		inner += `<text x="72" y="94" text-anchor="middle" font-family="${FONTS}" font-size="13" fill="${GRAY}">none</text>`;
 	}
-	if (sessions.length > start + 4) {
-		inner += `<text x="130" y="26" text-anchor="end" font-family="${FONTS}" font-size="12" fill="${GRAY}">+${sessions.length - start - 4}</text>`;
-	}
-	inner += `<text x="72" y="132" text-anchor="middle" font-family="${FONTS}" font-size="13" fill="${DIM}">${active} active · ${today} today</text>`;
+	const overflow = sessions.length - start - ROWS;
+	const footer = `${today} today${overflow > 0 ? ` · +${overflow} more` : ""}`;
+	inner += `<text x="72" y="135" text-anchor="middle" font-family="${FONTS}" font-size="12" fill="${DIM}">${esc(footer)}</text>`;
 	return svgWrap(inner);
 }
 
