@@ -4,6 +4,21 @@ A Stream Deck plugin for **[Claude Code](https://claude.com/claude-code)**: see 
 
 **Zero dependencies** — no `node_modules`, no build step. The plugin speaks the Stream Deck WebSocket protocol directly over `node:net`, and the Stream Deck app supplies the Node.js runtime.
 
+<p align="center">
+  <img src="docs/img/session-running.svg" width="90" alt="Session key: running" />
+  <img src="docs/img/session-needs-ok.svg" width="90" alt="Session key: needs approval" />
+  <img src="docs/img/session-input.svg" width="90" alt="Session key: waiting for input" />
+  <img src="docs/img/session-idle.svg" width="90" alt="Session key: idle" />
+</p>
+<p align="center">
+  <img src="docs/img/sessions.svg" width="90" alt="Active Sessions key: count, list, and paging" />
+  <img src="docs/img/approve.svg" width="90" alt="Approve key" />
+  <img src="docs/img/deny.svg" width="90" alt="Deny key" />
+  <img src="docs/img/usage.svg" width="90" alt="Usage key" />
+  <img src="docs/img/limits.svg" width="90" alt="Limits key" />
+</p>
+<p align="center"><sub>Session states (running / needs approval / input / idle) · session list with paging · approve · deny · usage · plan limits</sub></p>
+
 ## Actions
 
 | Key | Shows | Press |
@@ -99,6 +114,9 @@ node com.claudedeck.plugin.sdPlugin/bin/plugin.js --test
 
 # regenerate icons (pure-Node SDF renderer — no image libraries)
 node gen-icons.mjs
+
+# regenerate the README's example images from the real face renderer
+node gen-docs.mjs
 ```
 
 Runtime log: `com.claudedeck.plugin.sdPlugin/logs/claude-deck.log`

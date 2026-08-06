@@ -23,6 +23,10 @@ for f in com.claudedeck.plugin.sdPlugin/bin/plugin.js com.claudedeck.plugin.sdPl
 # Regenerate all PNG icons (pure-Node SDF renderer)
 node gen-icons.mjs
 
+# Regenerate README example images (docs/img/*.svg) from the real face
+# renderer — run after changing faces.js so the docs match
+node gen-docs.mjs
+
 # Symlink the plugin into Stream Deck and restart the app
 ./install.sh
 ```
