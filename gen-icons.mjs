@@ -7,7 +7,7 @@ import path from "node:path";
 
 const OUT = path.join(
 	import.meta.dirname,
-	"com.brialvarez.claude-deck.sdPlugin",
+	"com.claudedeck.plugin.sdPlugin",
 	"imgs",
 );
 

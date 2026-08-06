@@ -91,17 +91,17 @@ The Limits key reads your existing Claude Code OAuth token (macOS Keychain, read
 
 ## Development
 
-Everything lives in `com.brialvarez.claude-deck.sdPlugin/bin/plugin.js`. After editing, restart the Stream Deck app.
+The entry point is `com.claudedeck.plugin.sdPlugin/bin/plugin.js`; supporting modules live in `bin/lib/` (collector, terminals, cmux, limits, faces, ws). After editing, restart the Stream Deck app.
 
 ```sh
 # test the data pipeline + process/cmux mapping without a Stream Deck
-node com.brialvarez.claude-deck.sdPlugin/bin/plugin.js --test
+node com.claudedeck.plugin.sdPlugin/bin/plugin.js --test
 
 # regenerate icons (pure-Node SDF renderer — no image libraries)
 node gen-icons.mjs
 ```
 
-Runtime log: `com.brialvarez.claude-deck.sdPlugin/logs/claude-deck.log`
+Runtime log: `com.claudedeck.plugin.sdPlugin/logs/claude-deck.log`
 
 ## Privacy
 

@@ -2,7 +2,7 @@
 # Symlink the plugin into Stream Deck's plugin folder and restart the app.
 set -euo pipefail
 
-PLUGIN_ID="com.brialvarez.claude-deck.sdPlugin"
+PLUGIN_ID="com.claudedeck.plugin.sdPlugin"
 SRC="$(cd "$(dirname "$0")" && pwd)/$PLUGIN_ID"
 DEST="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins/$PLUGIN_ID"
 

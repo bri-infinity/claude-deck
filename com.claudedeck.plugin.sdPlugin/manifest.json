@@ -4,7 +4,7 @@
 	"Version": "1.0.0.0",
 	"Author": "Bri Alvarez",
 	"Description": "Monitor Claude Code sessions, token usage, and estimated cost right on your Stream Deck.",
-	"UUID": "com.brialvarez.claude-deck",
+	"UUID": "com.claudedeck.plugin",
 	"Icon": "imgs/plugin/icon",
 	"Category": "Claude Deck",
 	"CategoryIcon": "imgs/plugin/category-icon",
@@ -26,7 +26,7 @@
 	"Actions": [
 		{
 			"Name": "Session",
-			"UUID": "com.brialvarez.claude-deck.session",
+			"UUID": "com.claudedeck.plugin.session",
 			"Icon": "imgs/actions/session",
 			"Tooltip": "One Claude Code session per key: shows project, state, and activity. Press to jump to its terminal (or resume it in a new one). Place multiple keys for multiple sessions.",
 			"Controllers": ["Keypad"],
@@ -40,7 +40,7 @@
 		},
 		{
 			"Name": "Approve",
-			"UUID": "com.brialvarez.claude-deck.approve",
+			"UUID": "com.claudedeck.plugin.approve",
 			"Icon": "imgs/actions/approve",
 			"Tooltip": "Approve the pending permission request (focuses the session's terminal and presses Return).",
 			"Controllers": ["Keypad"],
@@ -54,7 +54,7 @@
 		},
 		{
 			"Name": "Deny",
-			"UUID": "com.brialvarez.claude-deck.deny",
+			"UUID": "com.claudedeck.plugin.deny",
 			"Icon": "imgs/actions/deny",
 			"Tooltip": "Deny the pending permission request (focuses the session's terminal and presses Escape).",
 			"Controllers": ["Keypad"],
@@ -68,7 +68,7 @@
 		},
 		{
 			"Name": "Limits",
-			"UUID": "com.brialvarez.claude-deck.limits",
+			"UUID": "com.claudedeck.plugin.limits",
 			"Icon": "imgs/actions/limits",
 			"Tooltip": "Your real Claude plan limits: current 5-hour session %, weekly %, and per-model weekly % — same numbers as /usage. Press to refresh.",
 			"Controllers": ["Keypad"],
@@ -82,7 +82,7 @@
 		},
 		{
 			"Name": "Active Sessions",
-			"UUID": "com.brialvarez.claude-deck.sessions",
+			"UUID": "com.claudedeck.plugin.sessions",
 			"Icon": "imgs/actions/sessions",
 			"Tooltip": "Shows how many Claude Code sessions are active right now, and how many were used today.",
 			"Controllers": ["Keypad"],
@@ -96,7 +96,7 @@
 		},
 		{
 			"Name": "Usage",
-			"UUID": "com.brialvarez.claude-deck.usage",
+			"UUID": "com.claudedeck.plugin.usage",
 			"Icon": "imgs/actions/usage",
 			"Tooltip": "Claude Code token usage and estimated cost. Press to cycle: Today / Last 5h / Last 7 days.",
 			"Controllers": ["Keypad"],

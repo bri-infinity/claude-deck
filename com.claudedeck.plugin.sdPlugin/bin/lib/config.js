@@ -23,12 +23,12 @@ export const RETAIN_MS = 8 * 24 * 3_600_000; // usage entries kept for the 7-day
 export const SESSION_LIST_WINDOW_MS = 24 * 3_600_000; // idle sessions leave the deck after this
 export const LONG_PRESS_MS = 600; // hold a Session key this long to dismiss it
 
-export const ACTION_SESSION = "com.brialvarez.claude-deck.session";
-export const ACTION_APPROVE = "com.brialvarez.claude-deck.approve";
-export const ACTION_DENY = "com.brialvarez.claude-deck.deny";
-export const ACTION_SESSIONS = "com.brialvarez.claude-deck.sessions";
-export const ACTION_USAGE = "com.brialvarez.claude-deck.usage";
-export const ACTION_LIMITS = "com.brialvarez.claude-deck.limits";
+export const ACTION_SESSION = "com.claudedeck.plugin.session";
+export const ACTION_APPROVE = "com.claudedeck.plugin.approve";
+export const ACTION_DENY = "com.claudedeck.plugin.deny";
+export const ACTION_SESSIONS = "com.claudedeck.plugin.sessions";
+export const ACTION_USAGE = "com.claudedeck.plugin.usage";
+export const ACTION_LIMITS = "com.claudedeck.plugin.limits";
 
 // Pricing per million tokens: [model substring, input, output].
 // Cache writes bill at 1.25x input (5-minute TTL), cache reads at 0.1x input.

@@ -1,5 +1,5 @@
 .tools/
 *.bak
 .DS_Store
-com.brialvarez.claude-deck.sdPlugin/logs/
+com.claudedeck.plugin.sdPlugin/logs/
 node_modules/
