@@ -34,7 +34,12 @@ export async function claudeProcesses() {
 			if (!/(^|\/)claude$/.test(exe)) continue;
 			// headless processes (tty "??") still count as "running" for duplicate-guarding
 			const devTty = tty === "??" || tty === "-" ? null : `/dev/${tty}`;
-			procs.push({ pid: Number(pid), tty: devTty, cwd: null });
+			// resumed sessions expose their session id in argv — exact identity
+			const sessionId =
+				command
+					.match(/--resume\s+'?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1]
+					?.toLowerCase() ?? null;
+			procs.push({ pid: Number(pid), tty: devTty, cwd: null, sessionId });
 		}
 	}
 	if (procs.length) {

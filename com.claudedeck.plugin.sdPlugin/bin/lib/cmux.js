@@ -70,11 +70,25 @@ function runCmux(args) {
  *   ├── workspace workspace:3 B21D...07 "title" [selected]
  *   │       └── surface surface:12 4AA9...13 [terminal] "title" tty=ttys000
  */
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * The Claude session ID a surface hosts, recorded by cmux's own
+ * session-start hook (also what cmux uses for its restore feature).
+ * Returns null for surfaces without one (e.g. plain shells, browsers).
+ */
+async function surfaceSessionId(surface) {
+	const ref = surface.surfaceUuid ?? surface.surface;
+	const out = await runCmux(["surface", "resume", "show", "--surface", ref]);
+	return out?.match(UUID_RE)?.[0]?.toLowerCase() ?? null;
+}
+
 export async function cmuxState() {
 	const out = await runCmux(["tree", "--all", "--id-format", "both"]);
 	const surfaces = [];
 	const ttyMap = new Map();
-	if (!out) return { surfaces, ttyMap };
+	const sessionMap = new Map(); // claude session id -> surface
+	if (!out) return { surfaces, ttyMap, sessionMap };
 	let window = null;
 	let windowUuid = null;
 	let workspace = null;
@@ -108,7 +122,14 @@ export async function cmuxState() {
 			if (entry.tty) ttyMap.set(entry.tty, entry);
 		}
 	}
-	return { surfaces, ttyMap };
+	// exact mapping: which claude session does each surface host?
+	await Promise.all(
+		surfaces.map(async (s) => {
+			s.sessionId = await surfaceSessionId(s);
+			if (s.sessionId) sessionMap.set(s.sessionId, s);
+		}),
+	);
+	return { surfaces, ttyMap, sessionMap };
 }
 
 /**
@@ -139,10 +160,23 @@ export async function cmuxLocByCwd(cwd, state) {
 	return null;
 }
 
-/** Bring the cmux workspace hosting the session to the front. */
+/**
+ * Bring the exact surface hosting the session to the front. The surface.focus
+ * RPC selects the surface, its pane/tab, and its workspace — important when a
+ * workspace hosts several claude sessions in splits or tabs.
+ */
 export async function cmuxFocus(loc) {
-	const ws = loc.workspaceUuid ?? loc.workspace;
-	if ((await runCmux(["select-workspace", "--workspace", ws])) === null) return false;
+	let ok = false;
+	if (loc.surfaceUuid) {
+		ok =
+			(await runCmux(["rpc", "surface.focus", JSON.stringify({ surface_id: loc.surfaceUuid })])) !==
+			null;
+	}
+	if (!ok) {
+		// fallback: workspace-level selection
+		const ws = loc.workspaceUuid ?? loc.workspace;
+		if ((await runCmux(["select-workspace", "--workspace", ws])) === null) return false;
+	}
 	// focus-window requires the UUID form; skip it (single-window case) if unknown
 	if (loc.windowUuid) await runCmux(["focus-window", "--window", loc.windowUuid]);
 	await run("open", ["-a", CMUX_APP]);

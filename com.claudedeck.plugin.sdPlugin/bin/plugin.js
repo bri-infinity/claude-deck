@@ -73,17 +73,37 @@ const WINDOWS = [
  *   { tty, running }  — on a plain terminal tty
  *   { running }       — process exists but is headless/unfocusable
  *   {}                — not running
- * Several claude processes can share a cwd (e.g. orphans left by a force
- * quit), so prefer the one that actually has a cmux surface.
+ *
+ * Matching ladder, most exact first — several sessions can share one
+ * workspace and even one cwd, so identity beats location:
+ *   1. cmux's per-surface session id (recorded by its session-start hook)
+ *   2. the `--resume <id>` in a resumed process's argv
+ *   3. process cwd, preferring processes whose tty has a cmux surface
+ *   4. surface cwd via `cmux debug-terminals` (surfaces with a lost tty)
  */
 async function locateSession(session, state) {
-	if (!session?.cwd) return {};
+	if (!session?.id) return {};
 	const procs = await claudeProcesses();
-	const matches = procs.filter((p) => p.cwd === session.cwd);
+
+	// processes belonging to this session: exact argv identity, else cwd
+	let matches = procs.filter((p) => p.sessionId === session.id);
+	if (!matches.length && session.cwd) {
+		// only trust cwd for processes that don't claim a *different* session
+		matches = procs.filter((p) => p.cwd === session.cwd && !p.sessionId);
+	}
+
+	// exact surface for this session id (works even when process matching
+	// fails, e.g. after cwd drift) — but only jump there if something runs
+	const exactSurface = state.sessionMap.get(session.id);
+	const looksAlive = matches.length > 0 || session.state !== "idle";
+	if (exactSurface && looksAlive) {
+		return { loc: exactSurface, tty: matches[0]?.tty ?? null, running: true };
+	}
+
 	if (!matches.length) {
 		log(
-			`locateSession: no process for ${session.cwd}; procs=${JSON.stringify(
-				procs.map((p) => ({ pid: p.pid, tty: p.tty, cwd: p.cwd })),
+			`locateSession: no process for ${session.name} (${session.id.slice(0, 8)}); procs=${JSON.stringify(
+				procs.map((p) => ({ pid: p.pid, tty: p.tty, cwd: p.cwd, sid: p.sessionId?.slice(0, 8) })),
 			)}`,
 		);
 		return {};
@@ -91,7 +111,7 @@ async function locateSession(session, state) {
 	const inMap = matches.find((p) => state.ttyMap.has(p.tty));
 	if (inMap) return { loc: state.ttyMap.get(inMap.tty), tty: inMap.tty, running: true };
 	// cmux may have lost the surface's tty (restored workspace) — match by cwd
-	const byCwd = await cmuxLocByCwd(session.cwd, state);
+	const byCwd = session.cwd ? await cmuxLocByCwd(session.cwd, state) : null;
 	if (byCwd) return { loc: byCwd, tty: matches[0].tty ?? null, running: true };
 	return { tty: matches[0].tty ?? null, running: true };
 }
@@ -124,6 +144,10 @@ if (process.argv.includes("--test")) {
 	if (cmuxAvailable()) {
 		const st = await cmuxState();
 		console.log("cmux surfaces:", JSON.stringify(st.surfaces));
+		console.log(
+			"cmux session map:",
+			JSON.stringify([...st.sessionMap.keys()].map((k) => k.slice(0, 8))),
+		);
 	}
 	await limits.refresh();
 	console.log("limits:", JSON.stringify(limits.rows));
@@ -279,7 +303,7 @@ async function handleSessionPress(context) {
 		showAlert(context);
 		return;
 	}
-	const state = cmuxAvailable() ? await cmuxState() : { surfaces: [], ttyMap: new Map() };
+	const state = cmuxAvailable() ? await cmuxState() : { surfaces: [], ttyMap: new Map(), sessionMap: new Map() };
 	const where = await locateSession(session, state);
 
 	if (where.loc) {
@@ -316,7 +340,7 @@ async function handleDecision(context, decision) {
 		showAlert(context);
 		return;
 	}
-	const state = cmuxAvailable() ? await cmuxState() : { surfaces: [], ttyMap: new Map() };
+	const state = cmuxAvailable() ? await cmuxState() : { surfaces: [], ttyMap: new Map(), sessionMap: new Map() };
 	const where = await locateSession(target, state);
 
 	// cmux surface: send the key directly — no focus stealing, no Accessibility
