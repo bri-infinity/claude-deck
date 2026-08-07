@@ -184,7 +184,10 @@ class UsageMonitor {
 			} catch {
 				continue;
 			}
-			if (obj.cwd && !state.cwd) state.cwd = obj.cwd;
+			// track the LATEST cwd — a resumed session may run from a different
+			// directory than where it was born, and process matching needs the
+			// current one
+			if (obj.cwd) state.cwd = obj.cwd;
 			const usage = obj?.message?.usage;
 			if (!usage) continue;
 			const model = obj.message.model;
