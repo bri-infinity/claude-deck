@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
 	"Name": "Claude Deck",
 	"Version": "1.0.0.0",
-	"Author": "Bri Alvarez",
+	"Author": "bri-infinity",
 	"Description": "Monitor Claude Code sessions, token usage, and estimated cost right on your Stream Deck.",
 	"UUID": "com.claudedeck.plugin",
 	"Icon": "imgs/plugin/icon",
