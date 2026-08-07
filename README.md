@@ -23,10 +23,10 @@ A Stream Deck plugin for **[Claude Code](https://claude.com/claude-code)**: see 
 
 | Key | Shows | Press |
 |---|---|---|
-| **Session** | One session per key: project name, state color (🟢 running / 🟠 needs approval / 🔵 waiting for input / ⚫ idle), time since activity. Place several — they fill left-to-right, approval-waiters first, then most recent. | Jump to the session's terminal (cmux workspace or Terminal.app/iTerm2 tab). If it isn't running, resume it (`claude --resume`) in a new terminal. **Long-press (0.6s) to dismiss** a session from the deck — it returns automatically on new activity. |
+| **Session** | One session per key: project name, state color (🟢 running / 🟠 needs approval / 🔵 waiting for input / ⚫ idle), time since activity. Place several — they fill left-to-right, approval-waiters first, then most recent. | Jump to the session's **exact terminal** — in cmux, the specific surface (split/tab) hosting that session, even when several sessions share a workspace; otherwise the Terminal.app/iTerm2 tab. If it isn't running, resume it (`claude --resume`) in a new terminal. **Long-press (0.6s) to dismiss** a session from the deck — it returns automatically on new activity. |
 | **Approve** | Which session it will approve (the one waiting for permission) | Sends Enter to that session — via direct cmux surface key injection (no focus stealing) or by focusing the Terminal/iTerm tab first |
 | **Deny** | Same target | Same, with Escape |
-| **Active Sessions** | Mini session list (state dot + name, page indicator, overflow count) with active/today counts. Bold rows = currently on your Session keys. | Pages the Session keys through the full list |
+| **Active Sessions** | Prominent **active-session count**, a mini session list below it (state dot + name; bold rows = currently on your Session keys), page indicator, and today/overflow counts in the footer. | Pages the Session keys through the full list |
 | **Usage** | Estimated spend + tokens from local transcripts | Cycles Today → Last 5h → Last 7 days |
 | **Limits** | Your **real plan limits** (same numbers as `/usage`): 5-hour session %, weekly %, per-model weekly % as color-coded bars | Refresh now |
 
@@ -100,7 +100,7 @@ The Limits key reads your existing Claude Code OAuth token (macOS Keychain, read
 ## How it works
 
 - **Sessions and usage**: incremental parsing of Claude Code's transcripts (`~/.claude/projects/*/*.jsonl`) — token counts summed per message with request-level dedup, costs estimated from published per-MTok API pricing (cache writes at 1.25× input, cache reads at 0.1×). Costs are estimates: subscription plans don't bill per token.
-- **Session → terminal mapping**: finds the `claude` process whose cwd matches the session (`ps` + one batched `lsof`), then locates its TTY in cmux's surface tree (with a cwd-based fallback for restored surfaces where cmux lost the TTY), or the Terminal.app/iTerm2 tab via AppleScript. All cmux handles use stable UUIDs.
+- **Session → terminal mapping** is identity-first, because several sessions can share one workspace or even one directory. The ladder, most exact first: (1) cmux's own per-surface record of which Claude session it hosts, (2) the `--resume <session-id>` in a resumed process's argv, (3) process cwd (`ps` + one batched `lsof`) matched to a cmux surface by TTY, (4) surface cwd for restored surfaces whose TTY cmux lost. In cmux the jump focuses the exact surface (`surface.focus`); plain Terminal.app/iTerm2 tabs are selected by TTY via AppleScript. All cmux handles use stable UUIDs.
 - **Safety rules**: a running session is never resumed into a duplicate; keystrokes are only ever delivered to an exactly-matched surface/tab.
 - **Waiting-state lifecycle**: a notification event marks a session waiting; any new transcript activity clears it.
 
