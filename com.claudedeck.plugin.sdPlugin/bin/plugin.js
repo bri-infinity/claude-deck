@@ -74,12 +74,16 @@ const WINDOWS = [
  *   { running }       — process exists but is headless/unfocusable
  *   {}                — not running
  *
- * Matching ladder, most exact first — several sessions can share one
- * workspace and even one cwd, so identity beats location:
- *   1. cmux's per-surface session id (recorded by its session-start hook)
- *   2. the `--resume <id>` in a resumed process's argv
- *   3. process cwd, preferring processes whose tty has a cmux surface
- *   4. surface cwd via `cmux debug-terminals` (surfaces with a lost tty)
+ * Two phases, most exact source first, because several sessions can share
+ * one workspace and even one cwd — identity beats location.
+ * Which process is this session?
+ *   1. the `--resume <id>` in a resumed process's argv
+ *   2. process cwd (only processes not claiming a different session)
+ * Which cmux surface hosts it?
+ *   1. CMUX_SURFACE_ID from the process environment (survives all cmux versions)
+ *   2. cmux's per-surface resume record (older cmux)
+ *   3. the process tty in cmux's surface tree (older cmux)
+ *   4. surface cwd via `cmux debug-terminals`
  */
 async function locateSession(session, state) {
 	if (!session?.id) return {};
@@ -90,6 +94,22 @@ async function locateSession(session, state) {
 	if (!matches.length && session.cwd) {
 		// only trust cwd for processes that don't claim a *different* session
 		matches = procs.filter((p) => p.cwd === session.cwd && !p.sessionId);
+	}
+
+	// authoritative: the surface id cmux injected into the process's env
+	const envMatch = matches.find((p) => p.cmuxSurfaceUuid);
+	if (envMatch) {
+		return {
+			loc: {
+				surfaceUuid: envMatch.cmuxSurfaceUuid,
+				workspaceUuid: envMatch.cmuxWorkspaceUuid ?? null,
+				surface: null,
+				workspace: null,
+				windowUuid: null,
+			},
+			tty: envMatch.tty,
+			running: true,
+		};
 	}
 
 	// exact surface for this session id (works even when process matching
@@ -337,6 +357,7 @@ async function handleSessionPress(context) {
 async function handleDecision(context, decision) {
 	const target = monitor.approvalTarget();
 	if (!target) {
+		log(`decision(${decision}): no session is waiting for permission`);
 		showAlert(context);
 		return;
 	}

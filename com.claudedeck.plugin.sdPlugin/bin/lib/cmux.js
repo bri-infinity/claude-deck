@@ -33,7 +33,7 @@ function cmuxPassword() {
 	return pw;
 }
 
-function runCmux(args) {
+function runCmux(args, { quiet = false } = {}) {
 	const pw = cmuxPassword();
 	return new Promise((resolve) => {
 		execFile(
@@ -46,9 +46,11 @@ function runCmux(args) {
 			},
 			(err, stdout, stderr) => {
 				if (err) {
-					log(
-						`cmux ${args[0]} failed: ${err.code ?? ""} ${err.message?.split("\n")[0] ?? ""} stderr=${String(stderr ?? "").trim().slice(0, 200)}`,
-					);
+					if (!quiet) {
+						log(
+							`cmux ${args[0]} failed: ${err.code ?? ""} ${err.message?.split("\n")[0] ?? ""} stderr=${String(stderr ?? "").trim().slice(0, 200)}`,
+						);
+					}
 					resolve(null);
 					return;
 				}
@@ -79,7 +81,8 @@ const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
  */
 async function surfaceSessionId(surface) {
 	const ref = surface.surfaceUuid ?? surface.surface;
-	const out = await runCmux(["surface", "resume", "show", "--surface", ref]);
+	// quiet: surfaces without a binding (or stale ones) error routinely
+	const out = await runCmux(["surface", "resume", "show", "--surface", ref], { quiet: true });
 	return out?.match(UUID_RE)?.[0]?.toLowerCase() ?? null;
 }
 
@@ -106,6 +109,12 @@ export async function cmuxState() {
 			workspaceUuid = ws[2] ?? null;
 			continue;
 		}
+		// pane level (newer cmux nests surfaces under panes): surfaces still
+		// belong to the current workspace, so panes are skipped deliberately
+		if (/\bpane (pane:\d+)/.test(line)) continue;
+		// note: `--id-format both` is accepted but undocumented; if a future
+		// cmux drops it, the UUID captures come back null and callers degrade
+		// to ref-based selection / env-derived surface ids
 		const s = line.match(/\bsurface (surface:\d+)(?:\s+([0-9A-Fa-f-]{36}))?/);
 		if (s && workspace) {
 			const tty = line.match(/\btty=(ttys\d+)/)?.[1];
@@ -165,12 +174,63 @@ export async function cmuxLocByCwd(cwd, state) {
  * RPC selects the surface, its pane/tab, and its workspace — important when a
  * workspace hosts several claude sessions in splits or tabs.
  */
+async function cmuxSurfaceIsCurrent(surfaceUuid) {
+	const out = await runCmux(["rpc", "surface.current", "{}"]);
+	try {
+		return JSON.parse(out).surface_id === surfaceUuid;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Tab-selection fallback for cmux builds where `surface.focus` focuses the
+ * pane but leaves a sibling tab selected: cmux's own notification-jump path
+ * always reveals the exact surface. The temporary notification is dismissed
+ * immediately after the jump.
+ */
+async function cmuxRevealViaNotification(surfaceUuid) {
+	const title = `claude-deck-jump-${Date.now().toString(36)}`;
+	if ((await runCmux(["notify", "--title", title, "--surface", surfaceUuid])) === null) {
+		return false;
+	}
+	const list = (await runCmux(["list-notifications"])) ?? "";
+	const lines = list.split("\n");
+	const at = lines.findIndex((l) => l.includes(title));
+	let id = null;
+	for (let i = Math.max(0, at - 2); at >= 0 && i <= Math.min(lines.length - 1, at + 2); i++) {
+		id = lines[i].match(UUID_RE)?.[0] ?? id;
+		if (id) break;
+	}
+	if (!id) return false;
+	const ok = (await runCmux(["open-notification", "--id", id])) !== null;
+	await runCmux(["dismiss-notification", "--id", id]);
+	return ok;
+}
+
 export async function cmuxFocus(loc) {
+	let windowUuid = loc.windowUuid ?? null;
 	let ok = false;
 	if (loc.surfaceUuid) {
-		ok =
-			(await runCmux(["rpc", "surface.focus", JSON.stringify({ surface_id: loc.surfaceUuid })])) !==
-			null;
+		const out = await runCmux([
+			"rpc",
+			"surface.focus",
+			JSON.stringify({ surface_id: loc.surfaceUuid }),
+		]);
+		ok = out !== null;
+		// the RPC reports where the surface lives — needed to raise the right
+		// window when the caller only knew the surface (env-derived locs)
+		if (ok && !windowUuid) {
+			try {
+				windowUuid = JSON.parse(out).window_id ?? null;
+			} catch {}
+		}
+		// some builds focus the pane but keep a sibling tab selected — verify,
+		// and reveal through the notification-jump path when that happens
+		if (ok && !(await cmuxSurfaceIsCurrent(loc.surfaceUuid))) {
+			log(`cmuxFocus: sibling tab stayed selected; using notification jump for ${loc.surfaceUuid}`);
+			await cmuxRevealViaNotification(loc.surfaceUuid);
+		}
 	}
 	if (!ok) {
 		// fallback: workspace-level selection
@@ -178,7 +238,7 @@ export async function cmuxFocus(loc) {
 		if ((await runCmux(["select-workspace", "--workspace", ws])) === null) return false;
 	}
 	// focus-window requires the UUID form; skip it (single-window case) if unknown
-	if (loc.windowUuid) await runCmux(["focus-window", "--window", loc.windowUuid]);
+	if (windowUuid) await runCmux(["focus-window", "--window", windowUuid]);
 	await run("open", ["-a", CMUX_APP]);
 	return true;
 }

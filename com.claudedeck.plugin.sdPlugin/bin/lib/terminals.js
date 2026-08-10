@@ -65,6 +65,32 @@ export async function claudeProcesses() {
 		} else {
 			log("claudeProcesses: lsof failed or timed out");
 		}
+
+		// cmux injects CMUX_SURFACE_ID / CMUX_WORKSPACE_ID into every workspace
+		// terminal; processes inherit them. This is the authoritative
+		// process -> surface identity (newer cmux versions stopped reporting
+		// TTYs and resume bindings, so env is the rung that always survives).
+		// `ps -E` shows environments for same-user processes only, which is all
+		// we need.
+		const out3 = await run("ps", [
+			"-wwE",
+			"-o",
+			"pid=,command=",
+			"-p",
+			procs.map((p) => p.pid).join(","),
+		]);
+		if (out3) {
+			for (const line of out3.split("\n")) {
+				const m = line.match(/^\s*(\d+)\s/);
+				if (!m) continue;
+				const p = procs.find((x) => x.pid === Number(m[1]));
+				if (!p) continue;
+				p.cmuxSurfaceUuid =
+					line.match(/\bCMUX_SURFACE_ID=([0-9A-Fa-f-]{36})/)?.[1] ?? null;
+				p.cmuxWorkspaceUuid =
+					line.match(/\bCMUX_WORKSPACE_ID=([0-9A-Fa-f-]{36})/)?.[1] ?? null;
+			}
+		}
 	}
 	procCache = { t: Date.now(), procs };
 	return procs;

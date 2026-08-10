@@ -33,14 +33,14 @@ node gen-docs.mjs
 
 **Reloading after edits:** the plugin process only restarts with the Stream Deck app — `killall "Stream Deck"; open -a "Elgato Stream Deck"`. Runtime behavior is diagnosed from `com.claudedeck.plugin.sdPlugin/logs/claude-deck.log` (every Stream Deck event and every failure path is logged; rotates at 512KB).
 
-If the machine has no system Node, a standalone one may live at `.tools/node/bin/node` (gitignored) — dev scripts only; the plugin itself uses Stream Deck's bundled runtime.
+If the machine has no system Node, a standalone one may live at `.tools/node/bin/node` (gitignored). Failing that, Stream Deck's own bundled runtime works for the dev commands too: `~/Library/Application Support/com.elgato.StreamDeck/NodeJS/*/node`. Either way this is dev-only; the plugin itself always runs on Stream Deck's bundled runtime.
 
 ## Architecture
 
 Entry point `bin/plugin.js` owns all mutable UI state (visible key contexts, session paging, long-press timers, per-key in-flight guards) and wires the modules in `bin/lib/`:
 
 - **collector.js** — the data layer. Incrementally parses Claude Code transcripts (`~/.claude/projects/*/*.jsonl`, offset-tracked via `jsonl.js`) into session metadata + usage entries, and merges "waiting for permission/input" state from `~/.claude/claude-deck/events.jsonl` (written by a user-installed Notification hook — see README). Key lifecycle rule: a notification event marks a session waiting; **any transcript growth clears it**. Also owns dismissed-session persistence (`~/.claude/claude-deck/hidden.json`).
-- **terminals.js / cmux.js** — the "where is this session?" layer. `claudeProcesses()` matches sessions to processes by cwd (`ps` + one batched `lsof`); cmux surfaces are found by TTY from `cmux tree`, with a cwd fallback via `cmux debug-terminals` for restored surfaces whose TTY cmux lost. `locateSession()` in plugin.js glues these: it prefers a cmux surface over a bare TTY over "running but unreachable".
+- **terminals.js / cmux.js** — the "where is this session?" layer. `claudeProcesses()` finds claude processes (`ps` + one batched `lsof` for cwds) and their identity: the `--resume <id>` in argv and — most importantly — the `CMUX_SURFACE_ID`/`CMUX_WORKSPACE_ID` env vars cmux injects into its terminals (read via `ps -wwE`). `locateSession()` in plugin.js runs the ladder: env-derived surface (works on every cmux version) → cmux per-surface resume record → TTY in `cmux tree` → cwd via `cmux debug-terminals`. **Newer cmux versions report no TTYs and no resume bindings** — on those, the env rung is the only exact one, so don't weaken it.
 - **faces.js** — pure functions from data to 144×144 SVG data URIs. No module state reads; callers pass a view model. Keep it that way.
 - **limits.js** — calls the same OAuth usage endpoint `/usage` uses, authenticated with the user's existing Claude Code token (Keychain, read-only). Self-throttles: 2-min base interval, 10-min backoff on 429, curl fallback when the plugin's own sockets are firewalled.
 - **ws.js** — minimal RFC 6455 client for Stream Deck's localhost socket. No fragmentation support (documented; Stream Deck frames are small). On close the process exits and Stream Deck relaunches it.
