@@ -43,14 +43,18 @@ Idle sessions age off the deck after 24 hours (waiting ones always show). Keys r
 
 ```sh
 git clone <this-repo> && cd claude-deck
-./install.sh   # symlinks the plugin into Stream Deck and restarts the app
+./install.sh
 ```
+
+That's the whole setup. The installer links the plugin into Stream Deck, **installs the Claude Code Notification hook** (merged into `~/.claude/settings.json`, backup saved), **configures cmux socket access** if cmux is installed (password mode + generated password file — it asks before restarting cmux, since that closes its terminals), restarts Stream Deck, and prints a status report. It's idempotent — re-run it any time, or run `./install.sh --check` to see the status without changing anything.
 
 Then drag actions from the **Claude Deck** category onto keys.
 
-### Setup: "needs approval" detection (recommended)
+The sections below document what the installer sets up, in case you prefer to do it manually or need to troubleshoot.
 
-The plugin learns that a session is waiting for permission via a Claude Code [Notification hook](https://code.claude.com/docs/en/hooks). Add to `~/.claude/settings.json` (merge with any existing hooks):
+### Reference: "needs approval" detection
+
+The plugin learns that a session is waiting for permission via a Claude Code [Notification hook](https://code.claude.com/docs/en/hooks) in `~/.claude/settings.json` (merged with any existing hooks):
 
 ```json
 {
@@ -72,9 +76,9 @@ The plugin learns that a session is waiting for permission via a Claude Code [No
 
 Without the hook, session keys still work — you just won't get the amber "NEEDS OK" state or approve/deny targeting.
 
-### Setup: cmux socket access (cmux users only)
+### Reference: cmux socket access (cmux users only)
 
-cmux only accepts control commands from its own processes by default. Let the plugin in:
+cmux only accepts control commands from its own processes by default. The installer performs these steps; manually they are:
 
 1. In `~/.config/cmux/cmux.json` set:
    ```json
@@ -88,12 +92,12 @@ cmux only accepts control commands from its own processes by default. Let the pl
 
 The plugin reads the password from that file automatically. cmux injects it into its own terminals, so cmux's hooks and CLI keep working unchanged.
 
-### Setup: macOS permissions
+### macOS permissions
 
 - **Automation** — macOS prompts when the plugin first controls Terminal/iTerm2 (not needed for cmux).
 - **Accessibility** — only needed for approve/deny on plain Terminal/iTerm2 (keystroke synthesis). cmux users don't need it: keys are injected via cmux's socket API.
 
-### Setup: plan limits key
+### Plan limits key
 
 The Limits key reads your existing Claude Code OAuth token (macOS Keychain, read-only — the refresh token is never touched) and calls the same endpoint the `/usage` command uses. No extra setup — but if you run a per-app firewall, allow the Stream Deck plugin process to reach `api.anthropic.com:443`.
 
