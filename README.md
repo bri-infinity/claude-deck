@@ -50,6 +50,8 @@ That's the whole setup. The installer links the plugin into Stream Deck, **insta
 
 Then drag actions from the **Claude Deck** category onto keys.
 
+To remove everything, run `./uninstall.sh` — it unlinks the plugin, removes the Notification hook (preserving your other hooks, backup saved), deletes the plugin's state files (`--keep-data` to keep them), and offers to revert the cmux socket config.
+
 The sections below document what the installer sets up, in case you prefer to do it manually or need to troubleshoot.
 
 ### Reference: "needs approval" detection
